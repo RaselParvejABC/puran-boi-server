@@ -1,11 +1,11 @@
 const express = require("express");
 const categoriesRouter = express.Router();
 
-const {categoriesCollection} = require("../../services/mongodb");
+const { categoriesCollection } = require("../../services/mongodb");
 
 categoriesRouter.get("/", async (req, res) => {
-  await categoriesCollection.find().toArray();
-  res.send("Hello, I am Puran Boi v1 Catergories!");
+  const categories = await categoriesCollection.find().toArray();
+  res.json(categories);
 });
 
 module.exports = categoriesRouter;

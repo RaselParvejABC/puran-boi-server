@@ -10,14 +10,13 @@ const apiV1 = require("./api/v1");
 const app = express();
 const port = 5000;
 
-
 //Global Middleware
 app.use(
   cors({
     origin: [
-      process.env.NODE_ENV !== "production" && "http://localhost:3000",
-      "https://math-mentor-737ff.web.app",
-      "https://math-mentor-737ff.firebaseapp.com",
+      process.env.NODE_ENV !== "production" && "http://localhost:5173",
+      "https://puran-boi.web.app/",
+      "https://puran-boi.firebaseapp.com/",
     ],
     credentials: true,
   })
@@ -28,8 +27,6 @@ app.use(cookieParser());
 app.get("/", (req, res) => {
   res.send("Puran Boi is here to Serve with Joy!");
 });
-
-
 
 //Delegating to Routers
 app.use("/api/v1", apiV1);

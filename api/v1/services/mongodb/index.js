@@ -9,7 +9,7 @@ const mongoClient = new MongoClient(uri, {
 });
 
 mongoClient.on("connectionCreated", () => {
-  console.log("Hello from Mongo!");
+  console.log("Hello again, from Mongo!");
 });
 
 const categoriesCollection = mongoClient
