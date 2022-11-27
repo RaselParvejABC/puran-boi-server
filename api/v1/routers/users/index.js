@@ -3,6 +3,28 @@ const jwt = require("jsonwebtoken");
 const { usersCollection } = require("../../services/mongodb");
 const usersRouter = express.Router();
 
+usersRouter.get("/:firebaseUID/type", async (req, res) => {
+  const uid = req.params.firebaseUID;
+  let doc;
+  try {
+    doc = await usersCollection.findOne(
+      { firebaseUID: uid },
+      {
+        projection: {
+          _id: 0,
+          userType: 1,
+        },
+      }
+    );
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+    return;
+  }
+
+  res.json(doc);
+});
+
 usersRouter.get("/grant-token/:firebaseUID", async (req, res) => {
   const uid = req.params.firebaseUID;
   let doc;
@@ -12,10 +34,10 @@ usersRouter.get("/grant-token/:firebaseUID", async (req, res) => {
       {
         projection: {
           _id: 0,
-          isVerified: 1,
-          isSeller: 1,
-          isAdmin: 1,
+          isVerifiedSeller: 1,
+          userType: 1,
           firebaseUID: 1,
+          addTimestamp: 1,
         },
       }
     );
@@ -49,10 +71,9 @@ usersRouter.post("/new-sign-in", async (req, res) => {
     $set: reqBody,
     $setOnInsert: {
       firebaseUID: firebaseUID,
-      isAdmin: false,
-      isVerified: false,
+      isVerifiedSeller: false,
       addTimestamp: new Date().getTime(),
-      isSeller: isSeller,
+      userType: isSeller ? "seller" : "buyer",
     },
   };
 
