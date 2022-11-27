@@ -81,6 +81,29 @@ productsRouter.post("/", async (req, res) => {
   res.json({ success: true });
 });
 
+//New Advertisement
+productsRouter.post("/ads/:productID", async (req, res) => {
+  const productID = new ObjectId(req.params.productID);
+  try {
+    await productsCollection.updateOne(
+      {
+        _id: productID,
+        productPBStatus: "notAdvertising",
+      },
+      {
+        $set: {
+          productPBStatus: "advertising",
+          advertisingTimestamp: new Date().getTime(),
+        },
+      }
+    );
+    res.json({ success: true });
+    return;
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false });
+  }
+});
 // Recent Ads on Client Home
 productsRouter.get("/ads/recent", async (req, res) => {
   try {

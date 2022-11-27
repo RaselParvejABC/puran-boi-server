@@ -8,6 +8,7 @@ categoriesRouter.get("/", async (req, res) => {
     const categories = await categoriesCollection.find().toArray();
     res.json(categories);
   } catch (err) {
+    console.error(err);
     res.sendStatus(500);
   }
 });
