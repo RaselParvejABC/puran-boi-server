@@ -5,11 +5,40 @@ const {
   usersCollection,
   reportsCollection,
   purchaseRequestsCollection,
+  categoriesCollection,
 } = require("../../services/mongodb");
 const productsRouter = express.Router();
 
 productsRouter.get("/", async (req, res) => {
   res.send("Hello, I am Puran Boi v1 Products!");
+});
+
+// Add New Product
+productsRouter.post("/", async (req, res) => {
+  const reqBody = req.body;
+  try {
+    const userDoc = await usersCollection.findOne(
+      {
+        firebaseUID: reqBody.sellerFirebaseUID,
+      },
+      {
+        projection: {
+          _id: 1,
+        },
+      }
+    );
+    reqBody.sellerUserID = userDoc._id;
+    reqBody.addTimestamp = new Date().getTime();
+    reqBody.categoryID = new ObjectId(reqBody.categoryID);
+    delete reqBody.sellerFirebaseUID;
+    await productsCollection.insertOne(reqBody);
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false });
+    return;
+  }
+
+  res.json({ success: true });
 });
 
 //Get Products of a seller
@@ -53,34 +82,6 @@ productsRouter.get("/my-products/:firebaseUID", async (req, res) => {
     console.error(err);
     res.sendStatus(500);
   }
-});
-
-// Add New Product
-productsRouter.post("/", async (req, res) => {
-  const reqBody = req.body;
-  try {
-    const userDoc = await usersCollection.findOne(
-      {
-        firebaseUID: reqBody.sellerFirebaseUID,
-      },
-      {
-        projection: {
-          _id: 1,
-        },
-      }
-    );
-    reqBody.sellerUserID = userDoc._id;
-    reqBody.addTimestamp = new Date().getTime();
-    reqBody.categoryID = new ObjectId(reqBody.categoryID);
-    delete reqBody.sellerFirebaseUID;
-    await productsCollection.insertOne(reqBody);
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false });
-    return;
-  }
-
-  res.json({ success: true });
 });
 
 //Delete a product
@@ -170,27 +171,46 @@ productsRouter.get("/ads/recent", async (req, res) => {
   }
 });
 
-// Recent Ads for Client Home
-productsRouter.get("/ads/category/:categoryID", async (req, res) => {
+// Ads under a category
+productsRouter.get("/ads/:categoryID", async (req, res) => {
+  const categoryID = new ObjectId(req.params.categoryID);
   try {
+    const categoryDoc = await categoriesCollection.findOne({
+      _id: categoryID,
+    });
     const result = await productsCollection
       .aggregate([
         {
           $match: {
             productPBStatus: "advertising",
+            categoryID: categoryID,
           },
         },
         {
-          $sort: {
-            advertisingTimestamp: -1,
+          $lookup: {
+            from: "users",
+            localField: "sellerUserID",
+            foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  _id: 0,
+                  sellerName: "$name",
+                  isSellerVerified: "$isVerifiedSeller",
+                },
+              },
+            ],
+            as: "seller",
           },
         },
         {
-          $limit: 3,
+          $unwind: "$seller",
         },
       ])
       .toArray();
-    res.json(result);
+    categoryDoc["products"] = result;
+    console.log(categoryDoc);
+    res.json(categoryDoc);
   } catch (err) {
     console.error(err);
     res.sendStatus(500);
