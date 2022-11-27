@@ -105,9 +105,15 @@ usersRouter.get("/:firebaseUID/product/:productID", async (req, res) => {
   const productID = new ObjectId(req.params.productID);
 
   try {
-    const { _id: userID } = await usersCollection.findOne({
+    const userDoc = await usersCollection.findOne({
       firebaseUID: firebaseUID,
     });
+
+    if (!userDoc) {
+      res.json({ requested: false, reported: false });
+      return;
+    }
+    const userID = userDoc["_id"];
 
     const report = await reportsCollection.findOne({
       reporterUserID: userID,
