@@ -209,7 +209,6 @@ productsRouter.get("/ads/:categoryID", async (req, res) => {
       ])
       .toArray();
     categoryDoc["products"] = result;
-    console.log(categoryDoc);
     res.json(categoryDoc);
   } catch (err) {
     console.error(err);

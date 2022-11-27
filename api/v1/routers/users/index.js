@@ -1,6 +1,11 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const { usersCollection } = require("../../services/mongodb");
+const { ObjectId } = require("mongodb");
+const {
+  usersCollection,
+  reportsCollection,
+  purchaseRequestsCollection,
+} = require("../../services/mongodb");
 const usersRouter = express.Router();
 
 usersRouter.get("/:firebaseUID/type", async (req, res) => {
@@ -93,6 +98,32 @@ usersRouter.delete("/revoke-token", (req, res) => {
     maxAge: 86_400_000,
   });
   res.json({ success: true });
+});
+
+usersRouter.get("/:firebaseUID/product/:productID", async (req, res) => {
+  const firebaseUID = req.params.firebaseUID;
+  const productID = new ObjectId(req.params.productID);
+
+  try {
+    const { _id: userID } = await usersCollection.findOne({
+      firebaseUID: firebaseUID,
+    });
+
+    const report = await reportsCollection.findOne({
+      reporterUserID: userID,
+      productID: productID,
+    });
+
+    const purchaseRequest = await purchaseRequestsCollection.findOne({
+      buyerUserID: userID,
+      productID: productID,
+    });
+
+    res.json({ requested: !!purchaseRequest, reported: !!report });
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
 });
 
 module.exports = usersRouter;

@@ -17,7 +17,9 @@ apiV1Router.get("/stats", async (req, res) => {
   try {
     const numberOfUsers = await usersCollection.countDocuments();
     const numberOfProducts = await productsCollection.countDocuments();
-    const numberOfAds = await productsCollection.countDocuments();
+    const numberOfAds = await productsCollection.countDocuments({
+      productPBStatus: "advertising",
+    });
     res.json({ numberOfAds, numberOfProducts, numberOfUsers });
   } catch (err) {
     console.log(err);
