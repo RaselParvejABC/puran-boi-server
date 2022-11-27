@@ -3,6 +3,8 @@ const { ObjectId } = require("mongodb");
 const {
   productsCollection,
   usersCollection,
+  reportsCollection,
+  purchaseRequestsCollection,
 } = require("../../services/mongodb");
 const productsRouter = express.Router();
 
@@ -81,6 +83,27 @@ productsRouter.post("/", async (req, res) => {
   res.json({ success: true });
 });
 
+//Delete a product
+productsRouter.delete("/:productID", async (req, res) => {
+  const productID = new ObjectId(req.params.productID);
+  try {
+    await reportsCollection.deleteMany({
+      productID: productID,
+    });
+    await purchaseRequestsCollection.deleteMany({
+      productID: productID,
+    });
+    await productsCollection.deleteOne({
+      _id: productID,
+    });
+    res.json({ success: true });
+    return;
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
 //New Advertisement
 productsRouter.post("/ads/:productID", async (req, res) => {
   const productID = new ObjectId(req.params.productID);
@@ -101,11 +124,54 @@ productsRouter.post("/ads/:productID", async (req, res) => {
     return;
   } catch (err) {
     console.error(err);
-    res.json({ success: false });
+    res.sendStatus(500);
   }
 });
-// Recent Ads on Client Home
+
+// Recent Ads for Client Home
 productsRouter.get("/ads/recent", async (req, res) => {
+  try {
+    const result = await productsCollection
+      .aggregate([
+        {
+          $match: {
+            productPBStatus: "advertising",
+          },
+        },
+        {
+          $limit: 3,
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "sellerUserID",
+            foreignField: "_id",
+            pipeline: [
+              {
+                $project: {
+                  _id: 0,
+                  sellerName: "$name",
+                  isSellerVerified: "$isVerifiedSeller",
+                },
+              },
+            ],
+            as: "seller",
+          },
+        },
+        {
+          $unwind: "$seller",
+        },
+      ])
+      .toArray();
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
+// Recent Ads for Client Home
+productsRouter.get("/ads/category/:categoryID", async (req, res) => {
   try {
     const result = await productsCollection
       .aggregate([
@@ -118,6 +184,9 @@ productsRouter.get("/ads/recent", async (req, res) => {
           $sort: {
             advertisingTimestamp: -1,
           },
+        },
+        {
+          $limit: 3,
         },
       ])
       .toArray();
