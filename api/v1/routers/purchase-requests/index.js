@@ -13,6 +13,23 @@ purchaseRequestsRouter.get("/", (req, res) => {
   res.send("Hello, I am Puran Boi v1 Purchase Requests!");
 });
 
+purchaseRequestsRouter.patch("/payment", checkJWTToken, async (req, res) => {
+  try {
+    const payment = req.body;
+    const purchaseRequestID = new ObjectId(payment["purchaseRequestID"]);
+    await purchaseRequestsCollection.updateOne(
+      {
+        _id: purchaseRequestID,
+      },
+      { $set: { status: "paid", payment: payment } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+});
+
 purchaseRequestsRouter.patch("/reject/:purchaseRequestID", async (req, res) => {
   try {
     const purchaseRequestID = new ObjectId(req.params.purchaseRequestID);
