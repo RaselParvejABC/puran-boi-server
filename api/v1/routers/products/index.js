@@ -6,6 +6,7 @@ const {
   reportsCollection,
   purchaseRequestsCollection,
   categoriesCollection,
+  getMongoClient,
 } = require("../../services/mongodb");
 const checkJWTToken = require("../../helpers");
 const productsRouter = express.Router();
@@ -87,22 +88,50 @@ productsRouter.get("/my-products/:firebaseUID", async (req, res) => {
 
 //Delete a product
 productsRouter.delete("/:productID", async (req, res) => {
+  const client = getMongoClient();
+  const session = client.startSession();
+  const transactionOptions = {
+    readConcern: { level: "snapshot" },
+    writeConcern: { w: "majority" },
+    readPreference: "primary",
+  };
+
   const productID = new ObjectId(req.params.productID);
   try {
-    await reportsCollection.deleteMany({
-      productID: productID,
-    });
-    await purchaseRequestsCollection.deleteMany({
-      productID: productID,
-    });
-    await productsCollection.deleteOne({
-      _id: productID,
-    });
+    session.startTransaction(transactionOptions);
+
+    await reportsCollection.deleteMany(
+      {
+        productID: productID,
+      },
+      { session }
+    );
+
+    await purchaseRequestsCollection.deleteMany(
+      {
+        productID: productID,
+      },
+      { session }
+    );
+
+    await productsCollection.deleteOne(
+      {
+        _id: productID,
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+
     res.json({ success: true });
     return;
   } catch (err) {
+    await session.abortTransaction();
+
     console.error(err);
     res.sendStatus(500);
+  } finally {
+    await session.endSession();
   }
 });
 
@@ -191,6 +220,11 @@ productsRouter.get("/ads/:categoryID", checkJWTToken, async (req, res) => {
             productPBStatus: "advertising",
             categoryID: categoryID,
           },
+        },
+        {
+          $sort: {
+            addTimestamp: -1
+          }
         },
         {
           $lookup: {
