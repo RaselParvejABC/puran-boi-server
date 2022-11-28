@@ -3,6 +3,7 @@ const { ObjectId } = require("mongodb");
 const {
   usersCollection,
   purchaseRequestsCollection,
+  productsCollection,
 } = require("../../services/mongodb");
 const purchaseRequestsRouter = express.Router();
 
@@ -53,6 +54,99 @@ purchaseRequestsRouter.get("/from/:firebaseUID", async (req, res) => {
       .toArray();
     res.json(myPurchaseRequests);
     console.log(myPurchaseRequests);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+});
+
+purchaseRequestsRouter.get("/to/:firebaseUID", async (req, res) => {
+  try {
+    const firebaseUID = req.params.firebaseUID;
+    const { _id: sellerUserID } = await usersCollection.findOne({
+      firebaseUID: firebaseUID,
+    });
+    const myProducts = await productsCollection
+      .aggregate([
+        {
+          $match: {
+            sellerUserID: sellerUserID,
+            productPBStatus: {
+              $nin: ["notAdvertising"],
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            productTitle: 1,
+            priceInBDT: 1,
+            productPBStatus: 1,
+          },
+        },
+      ])
+      .toArray();
+
+    const purchaseRequestsToMe = await purchaseRequestsCollection
+      .aggregate([
+        {
+          $match: {
+            productID: {
+              $in: myProducts.map((product) => product._id),
+            },
+            status: {
+              $nin: ["rejected"],
+            },
+          },
+        },
+        {
+          $sort: {
+            addTimestamp: -1,
+          },
+        },
+        {
+          $lookup: {
+            from: "products",
+            localField: "productID",
+            foreignField: "_id",
+            as: "product",
+            pipeline: [
+              {
+                $project: {
+                  _id: 0,
+                  productTitle: 1,
+                  priceInBDT: 1,
+                  productPBStatus: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $unwind: "$product",
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "buyerUserID",
+            foreignField: "_id",
+            as: "buyer",
+            pipeline: [
+              {
+                $project: {
+                  _id: 0,
+                  name: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $unwind: "$buyer",
+        },
+      ])
+      .toArray();
+    res.json(purchaseRequestsToMe);
   } catch (err) {
     console.log(err);
     res.sendStatus(500);

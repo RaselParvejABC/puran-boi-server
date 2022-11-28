@@ -104,13 +104,18 @@ usersRouter.get("/:firebaseUID/product/:productID", async (req, res) => {
   const firebaseUID = req.params.firebaseUID;
   const productID = new ObjectId(req.params.productID);
 
+  if (firebaseUID === "none") {
+    res.json({ requested: false, reported: false });
+    return;
+  }
+
   try {
     const userDoc = await usersCollection.findOne({
       firebaseUID: firebaseUID,
     });
 
-    if (!userDoc) {
-      res.json({ requested: false, reported: false });
+    if (userDoc["userType"] !== "buyer") {
+      res.json({ isBuyer: false });
       return;
     }
     const userID = userDoc["_id"];
@@ -125,7 +130,11 @@ usersRouter.get("/:firebaseUID/product/:productID", async (req, res) => {
       productID: productID,
     });
 
-    res.json({ requested: !!purchaseRequest, reported: !!report });
+    res.json({
+      isBuyer: true,
+      requested: !!purchaseRequest,
+      reported: !!report,
+    });
   } catch (err) {
     console.log(err);
     res.sendStatus(500);

@@ -140,6 +140,11 @@ productsRouter.get("/ads/recent", async (req, res) => {
           },
         },
         {
+          $sort: {
+            addTimestamp: -1,
+          },
+        },
+        {
           $limit: 3,
         },
         {
