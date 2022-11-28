@@ -15,8 +15,8 @@ app.use(
   cors({
     origin: [
       process.env.NODE_ENV !== "production" && "http://localhost:5173",
-      "https://puran-boi.web.app/",
-      "https://puran-boi.firebaseapp.com/",
+      "https://puran-boi.web.app",
+      "https://puran-boi.firebaseapp.com",
     ],
     credentials: true,
   })
