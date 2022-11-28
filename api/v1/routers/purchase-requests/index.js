@@ -1,6 +1,7 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
 const checkJWTToken = require("../../helpers");
+const stripe = require("stripe")(process.env.STRIPE_API_KEY);
 const {
   usersCollection,
   purchaseRequestsCollection,
@@ -109,7 +110,6 @@ purchaseRequestsRouter.get(
         ])
         .toArray();
       res.json(myPurchaseRequests);
-      console.log(myPurchaseRequests);
     } catch (err) {
       console.log(err);
       res.sendStatus(500);
@@ -229,5 +229,24 @@ purchaseRequestsRouter.post("/", async (req, res) => {
     res.sendStatus(500);
   }
 });
+
+purchaseRequestsRouter.get(
+  "/stripe-client-secret/:amount",
+  checkJWTToken,
+  async (req, res) => {
+    try {
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: parseInt(req.params.amount),
+        currency: "usd",
+      });
+      res.json({
+        stripeClientSecret: paymentIntent.client_secret,
+      });
+    } catch (err) {
+      console.log(err);
+      res.sendStatus(500);
+    }
+  }
+);
 
 module.exports = purchaseRequestsRouter;

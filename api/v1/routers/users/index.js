@@ -228,7 +228,6 @@ usersRouter.delete("/delete/:id", checkJWTToken, async (req, res) => {
 });
 
 usersRouter.patch("/verify/:id", checkJWTToken, async (req, res) => {
-  console.log("called");
   try {
     const userID = new ObjectId(req.params.id);
     await usersCollection.updateOne(
