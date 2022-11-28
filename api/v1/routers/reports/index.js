@@ -4,10 +4,19 @@ const {
   reportsCollection,
   usersCollection,
 } = require("../../services/mongodb");
+const checkJWTToken = require("../../helpers");
 const reportsRouter = express.Router();
 
-reportsRouter.get("/", (req, res) => {
-  res.send("Hello, I am Puran Boi v1 Reports!");
+reportsRouter.get("/unresolved", checkJWTToken, async (req, res) => {
+  try {
+    const result = await reportsCollection
+      .find({ status: "unresolved" }, { sort: { addTimestamp: -1 } })
+      .toArray();
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
 });
 
 reportsRouter.post(

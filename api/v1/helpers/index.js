@@ -7,7 +7,7 @@ const checkJWTToken = async (req, res, next) => {
     res.sendStatus(401);
     return;
   }
-  console.log("Token1", token);
+
   let decodedToken;
   try {
     decodedToken = jwt.verify(token, process.env.JWT_SECRET);

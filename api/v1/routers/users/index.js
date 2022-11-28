@@ -1,10 +1,13 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const { ObjectId } = require("mongodb");
+const checkJWTToken = require("../../helpers");
 const {
   usersCollection,
   reportsCollection,
   purchaseRequestsCollection,
+  productsCollection,
+  getMongoClient,
 } = require("../../services/mongodb");
 const usersRouter = express.Router();
 
@@ -114,7 +117,7 @@ usersRouter.get("/:firebaseUID/product/:productID", async (req, res) => {
       firebaseUID: firebaseUID,
     });
 
-    if (userDoc["userType"] !== "buyer") {
+    if (!userDoc && userDoc["userType"] !== "buyer") {
       res.json({ isBuyer: false });
       return;
     }
@@ -137,6 +140,104 @@ usersRouter.get("/:firebaseUID/product/:productID", async (req, res) => {
     });
   } catch (err) {
     console.log(err);
+    res.sendStatus(500);
+  }
+});
+
+usersRouter.get("/all-sellers", checkJWTToken, async (req, res) => {
+  try {
+    const result = await usersCollection
+      .aggregate([
+        {
+          $match: {
+            userType: "seller",
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            email: 1,
+            isVerifiedSeller: 1,
+          },
+        },
+      ])
+      .toArray();
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
+usersRouter.get("/all-buyers", checkJWTToken, async (req, res) => {
+  try {
+    const result = await usersCollection
+      .aggregate([
+        {
+          $match: {
+            userType: "buyer",
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            email: 1,
+          },
+        },
+      ])
+      .toArray();
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.sendStatus(500);
+  }
+});
+
+usersRouter.delete("/delete/:id", checkJWTToken, async (req, res) => {
+  const client = getMongoClient();
+  const transactionOptions = {
+    readConcern: { level: "snapshot" },
+    writeConcern: { w: "majority" },
+    readPreference: "primary",
+  };
+  const session = client.startSession();
+  try {
+    session.startTransaction(transactionOptions);
+    const userID = new ObjectId(req.params.id);
+
+    await purchaseRequestsCollection.deleteMany(
+      { buyerUserID: userID },
+      { session }
+    );
+    await productsCollection.deleteMany({ sellerUserID: userID }, { session });
+    await reportsCollection.deleteMany({ reporterUserID: userID }, { session });
+
+    await usersCollection.deleteOne({ _id: userID });
+
+    await session.commitTransaction();
+    res.json({ success: true });
+  } catch (err) {
+    await session.abortTransaction();
+    console.error(err);
+    res.sendStatus(500);
+  } finally {
+    await session.endSession();
+  }
+});
+
+usersRouter.patch("/verify/:id", checkJWTToken, async (req, res) => {
+  console.log("called");
+  try {
+    const userID = new ObjectId(req.params.id);
+    await usersCollection.updateOne(
+      { _id: userID },
+      { $set: { isVerifiedSeller: true } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
     res.sendStatus(500);
   }
 });
