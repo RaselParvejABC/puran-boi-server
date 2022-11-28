@@ -54,7 +54,7 @@ usersRouter.get("/grant-token/:firebaseUID", async (req, res) => {
   const payload = { token: doc, tokenTimestamp: new Date().getTime() };
   const token = jwt.sign(payload, process.env.JWT_SECRET);
   res.cookie("token", token, {
-    secure: process.env.NODE_ENV === "production",
+    secure: true,
     httpOnly: true,
     maxAge: 86_400_000,
     sameSite: "none",

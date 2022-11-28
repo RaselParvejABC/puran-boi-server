@@ -7,6 +7,7 @@ const {
   purchaseRequestsCollection,
   categoriesCollection,
 } = require("../../services/mongodb");
+const checkJWTToken = require("../../helpers");
 const productsRouter = express.Router();
 
 productsRouter.get("/", async (req, res) => {
@@ -177,7 +178,7 @@ productsRouter.get("/ads/recent", async (req, res) => {
 });
 
 // Ads under a category
-productsRouter.get("/ads/:categoryID", async (req, res) => {
+productsRouter.get("/ads/:categoryID", checkJWTToken, async (req, res) => {
   const categoryID = new ObjectId(req.params.categoryID);
   try {
     const categoryDoc = await categoriesCollection.findOne({
